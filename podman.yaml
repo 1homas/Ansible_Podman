@@ -1,0 +1,229 @@
+---
+#------------------------------------------------------------------------------
+# podman commands via Ansible
+#
+# Examples:
+#   ansible-playbook podman.yaml --tags containers
+#   ansible-playbook podman.yaml --tags containers -v
+#   ansible-playbook podman.yaml --tags images
+#   ansible-playbook podman.yaml --tags volumes
+#------------------------------------------------------------------------------
+- name: Podman
+  hosts: localhost
+  gather_facts: yes
+  vars:
+  vars_files:
+  roles:
+  tasks:
+    #--------------------------------------------------------------------------
+    # podman image
+    #--------------------------------------------------------------------------
+    - name: Get Image Info
+      tags: image,images,img,
+      block:
+        # - name: Pull Image
+        #   containers.podman.podman_image:
+        #     name: nginx
+        #     state: present  # [present (default), absent, build]
+        #     # pull: true      # default: true
+        #     # username:       # for remote registries
+        #     # password:       # for remote registries
+        #   register: result
+
+        - name: Get Local Image Info
+          containers.podman.podman_image_info:
+          register: result
+
+        - name: Set `images`
+          ansible.builtin.set_fact:
+            images: "{{ result.images }}"
+
+        # - name: List Image Attributes
+        #   when:
+        #     - images is defined
+        #     - images | count > 0
+        #   ansible.builtin.debug:
+        #     msg: |
+        #       {{ images | first | json_query('keys(@)') }}
+
+        - name: Podman Images
+          when:
+            - images is defined
+            - images | count > 0
+          delegate_to: localhost
+          vars:
+            maxw: 40
+            head:
+              # - Id
+              # - Digest
+              - RepoTags
+              # - RepoDigests
+              # - Parent
+              # - Comment
+              # - Created
+              # - Config
+              - Version
+              # - Author
+              - Architecture
+              - Os
+              - Size
+              # - VirtualSize
+              # - GraphDriver
+              # - RootFS
+              # - Labels
+              # - Annotations
+              # - ManifestType
+              # - User
+              # - History
+              # - NamesHistory
+            hide: []
+            rows: "{{ images }}"
+            temp: "{{ lookup('template', 'list_of_dicts.j2') }}"
+          ansible.builtin.debug:
+            msg: "{{ temp }}"
+
+    #--------------------------------------------------------------------------
+    # podman network
+    #--------------------------------------------------------------------------
+    - name: Get Network Info
+      tags: network,networks,
+      block:
+        - name: Get Networks Info
+          containers.podman.podman_network_info:
+          register: result
+
+        - name: Set `networks`
+          ansible.builtin.set_fact:
+            networks: "{{ result.networks }}"
+
+        # - name: List Networks Attributes
+        #   when:
+        #     - networks is defined
+        #     - networks | count > 0
+        #   ansible.builtin.debug:
+        #     msg: |
+        #       {{ networks | first | json_query('keys(@)') }}
+
+        - name: Podman Networks
+          when:
+            - networks is defined
+            - networks | count > 0
+          delegate_to: localhost
+          vars:
+            maxw: 40
+            head:
+              - name
+              # - id
+              - driver
+              - network_interface
+              # - created
+              - subnets
+              # - ipv6_enabled
+              - internal
+              - dns_enabled
+              # - ipam_options
+            # hide: []
+            rows: "{{ networks }}"
+            temp: "{{ lookup('template', 'list_of_dicts.j2') }}"
+          ansible.builtin.debug:
+            msg: "{{ temp }}"
+
+    #--------------------------------------------------------------------------
+    # podman volume
+    #--------------------------------------------------------------------------
+    - name: Get Volume Info
+      tags: volume,volumes,
+      block:
+        - name: Get Volumes Info
+          containers.podman.podman_volume_info:
+          register: result
+
+        - name: Set `volumes`
+          ansible.builtin.set_fact:
+            volumes: "{{ result.volumes }}"
+
+        # - name: List Volume Attributes
+        #   when:
+        #     - volumes is defined
+        #     - volumes | count > 0
+        #   ansible.builtin.debug:
+        #     msg: |
+        #       {{ volumes | first | json_query('keys(@)') }}
+
+        - name: Podman Volumes
+          when:
+            - volumes is defined
+            - volumes | count > 0
+          delegate_to: localhost
+          vars:
+            maxw: 40
+            hide: []
+            rows: "{{ volumes }}"
+            temp: "{{ lookup('template', 'list_of_dicts.j2') }}"
+          ansible.builtin.debug:
+            msg: "{{ temp }}"
+
+    #--------------------------------------------------------------------------
+    # podman container
+    #--------------------------------------------------------------------------
+    - name: Get Container Info
+      tags: container,containers,
+      block:
+        - name: Get Container Info
+          containers.podman.podman_container_info:
+            # name: nginx
+          register: result
+
+        - name: Set `containers`
+          ansible.builtin.set_fact:
+            containers: "{{ result.containers }}"
+
+        # - name: List Container Attributes
+        #   when:
+        #     - containers is defined
+        #     - containers | count > 0
+        #   ansible.builtin.debug:
+        #     msg: |
+        #       {{ containers | first | json_query('keys(@)') }}
+
+        - name: Podman Containers
+          when:
+            - containers is defined
+            - containers | count > 0
+          delegate_to: localhost
+          vars:
+            maxw: 40
+            head:
+              - Name
+              #  - NameSpace
+              #  - Created
+              - ImageName
+              - IsService
+              - IsInfra
+              - Pod
+              - Path
+            hide: []
+            rows: "{{ containers }}"
+            temp: "{{ lookup('template', 'list_of_dicts.j2') }}"
+          ansible.builtin.debug:
+            msg: "{{ temp }}"
+
+    #--------------------------------------------------------------------------
+    # podman container rm
+    #--------------------------------------------------------------------------
+    - name: Get Container Info
+      tags: rm,delete,remove,
+      block:
+        - name: Get All Containers
+          containers.podman.podman_container_info:
+          register: result
+
+        - name: Set `containers`
+          ansible.builtin.set_fact:
+            containers: "{{ result.containers }}"
+
+        - name: Stop and Remove All Containers
+          loop: "{{ containers }}"
+          containers.podman.podman_container:
+            state: absent
+            name: "{{ item.Name }}"

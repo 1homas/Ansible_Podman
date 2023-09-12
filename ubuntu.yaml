@@ -1,0 +1,91 @@
+---
+#------------------------------------------------------------------------------
+# docker.io/library/ubuntu:latest
+# podman run -dt --name ubuntu ubuntu:latest
+# podman attach ubuntu
+#------------------------------------------------------------------------------
+
+- name: Create an Ubuntu 22.04 Container
+  hosts: localhost
+  gather_facts: no
+  vars:
+    registry: docker.io
+    container_name: ubuntu_2204
+    image: ubuntu
+    image_tag: 22.04
+    # Ubuntu Tags:
+    #   20.04, focal-20230801, focal
+    #   22.04, jammy-20230816, jammy, latest
+    #   23.04, lunar-20230816, lunar, rolling
+    #   23.10, mantic-20230819, mantic, devel
+
+  tasks:
+
+    # - name: Create the Local Directories
+    #   ansible.builtin.file:
+    #     path: "{{ dir_ubuntu }}"
+    #     state: directory
+
+    - name: Create Ubuntu Container
+      containers.podman.podman_container:
+        state: started  # [absent, present, stopped, started (default), created]
+        name: "{{ container_name }}"
+        image: "{{ registry }}/{{ image }}:{{ image_tag | default('latest') }}"
+        hostname: "{{ container_name }}"
+        restart_policy: on-failure:10  # [:max_retries]
+        detach: true  # Run container in detach mode. Default: true
+        tty: true   # Allocate a pseudo-TTY. Default: false
+        volume: # Bind mounts /HOST-DIR to /CONTAINER-DIR 
+          - "{{ playbook_dir }}/files/1homas:/home/1homas"
+          - "{{ playbook_dir }}/roles/races/files/:/data"
+      register: container
+
+    - name: Container Details
+      vars:
+        bar: "░  "
+        line_2: "Attach to container {{ container_name }}:"
+        line_3: "  `podman attach {{ container_name }}`"
+      ansible.builtin.debug:
+        msg: |
+          {{bar}}
+          {{bar}}        _    
+          {{bar}}    ,--(_)     {{ line_1 | default('') }}
+          {{bar}}  _/ ;-._\     {{ line_2 | default('') }}
+          {{bar}} (_)(   ) )    {{ line_3 | default('') }}
+          {{bar}}   \ ;-'_/     {{ line_4 | default('') }}
+          {{bar}}    `--(_)     {{ line_5 | default('') }}
+          {{bar}}
+
+          Podman CLI Equivalent Commands:
+          {{ container.podman_actions | to_nice_yaml(indent=2) }}
+
+
+    # apt update
+    # apt install -y vim dnsutils 
+
+    # - name: Run commands using podman tool
+    #   containers.podman.podman:
+    #     remote_addr: "{{ container.id }}" # ID of the container you want to access: ansible_host, inventory_hostname, ansible_podman_host
+    #     remote_user:        # name or UID | ANSIBLE_REMOTE_USER | ansible_user
+    #     podman_executable:  # podman | ANSIBLE_PODMAN_EXECUTABLE | ansible_podman_executable
+    #     podman_extra_args:
+
+    # - name: Allow the Ubuntu container to run in the 80 port of the host
+    #   become: true
+    #   become_user: root
+    #   become_method: sudo
+    #   ansible.posix.sysctl:
+    #     name: net.ipv4.ip_unprivileged_port_start
+    #     value: "80"
+    #     sysctl_set: true
+    #     reload: true
+
+    # - name: Disable Container Lower Ports
+    #   become: true
+    #   become_user: root
+    #   become_method: sudo
+    #   ansible.posix.sysctl:
+    #     name: net.ipv4.ip_unprivileged_port_start
+    #     value: "1024"
+    #     sysctl_set: true
+    #     reload: true

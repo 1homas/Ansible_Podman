@@ -1,0 +1,42 @@
+---
+- name: BusyBox Container
+  hosts: localhost
+  gather_facts: no
+  vars:
+    dir_data: /tmp/data
+  vars_files:
+  tasks:
+    - name: Create Local Directory | {{ dir_data }}
+      ansible.builtin.file:
+        path: "{{ dir_data }}"
+        state: directory
+
+    - name: Create a BusyBox Container
+      containers.podman.podman_container:
+        name: BusyBox
+        image: busybox:latest # https://hub.docker.com/_/busybox
+        interactive: yes # Keep stdin open even if not attached. Default: false
+        tty: yes # Allocate a pseudo-TTY. Default: false
+        volume:
+          - "{{ dir_data }}"
+      register: container
+
+    - name: Container Details
+      vars:
+        bar: "░  "
+        line_2: "{{ container.container.Name }}"
+        line_4: "Connect: `podman attach {{ container.container.Name }}`"
+      ansible.builtin.debug:
+        msg: |
+          {{bar}}
+          {{bar}}     .--.       {{ line_1 | default('') }}
+          {{bar}}    |o_o |      {{ line_2 | default('') }}
+          {{bar}}    |:_/ |      {{ line_3 | default('') }}
+          {{bar}}   //   \ \     {{ line_4 | default('') }}
+          {{bar}}  (|     | )    {{ line_5 | default('') }}
+          {{bar}} /'\_   _/`\    {{ line_6 | default('') }}
+          {{bar}} \___)=(___/    {{ line_7 | default('') }}
+          {{bar}}
+
+          Podman CLI Equivalent Commands:
+          {{ container.podman_actions | to_nice_yaml(indent=2) }}

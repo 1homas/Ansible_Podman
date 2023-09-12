@@ -1,0 +1,156 @@
+---
+#------------------------------------------------------------------------------
+# podman run \
+#   --rm \
+#   --detach \
+#   --publish 3000:3000 \
+#   --name=grafana \
+#   --env "GF_INSTALL_PLUGINS=marcusolsson-csv-datasource,marcusolsson-json-datasource" \
+#   grafana/grafana-oss:latest
+#------------------------------------------------------------------------------
+
+- name: Create a Grafana Container
+  hosts: localhost
+  gather_facts: no
+  vars:
+    container:
+      name: grafana
+      registry: docker.io
+      image: grafana/grafana-oss
+      tag: latest
+      detach: yes # Run container in detach mode. Default: true
+      env: # dictionary of environment variables. Also see `env_file` & `env_host`
+        GF_INSTALL_PLUGINS: marcusolsson-csv-datasource,marcusolsson-json-datasource
+      mounts: # - type=bind,source=/path/on/host,destination=/path/in/container
+        - type=bind,source={{ playbook_dir }}/files/1homas,destination=/home/1homas
+        - type=bind,source={{ playbook_dir }}/roles/races/files/,destination=/data
+      # interactive: yes  # Keep stdin open even if not attached. Default: false
+      rm: no
+      publish: 3000:3000 # publish port(s) Format: hostPort:containerPort | ip:hostPort:containerPort | ip::containerPort
+      # volumes:
+      #   - "{{ playbook_dir }}/files/1homas:/home/1homas"
+      #   - "{{ playbook_dir }}/roles/races/files/:/data"
+      #   - "{{ dir_ubuntu }}:/home" # :Z"
+      #   - "{{ dir_www_local }}:/usr/share/Ubuntu/html" # :Z"
+      # restart_policy: "no"  # [ always | no | on-failure[:max_retries] ]
+      # tty: yes # Allocate a pseudo-TTY. Default: false
+
+      # pod: new
+      # add_hosts: # hostame: IP mapping dict added to the container’s `/etc/hosts` file
+      # dns_servers: # list of DNS servers
+      # read_only: false
+      # expose: 80:80 # Expose a port [range] for redirection on host
+      # publish_all: false
+      # ip: 1.2.3.4 # static IP within default CNI pool (10.88.0.0/16)
+      #   - "{{ dir_ubuntu }}:/home" # :Z"
+      #   - "{{ dir_www_local }}:/usr/share/Ubuntu/html" # :Z"
+
+  tasks:
+    # - name: Create the Local Directories
+    #   ansible.builtin.file:
+    #     path: "{{ dir_ubuntu }}"
+    #     state: directory
+
+    - name: Create Container
+      containers.podman.podman_container:
+        state: started # [absent, present, stopped, started (default), created]
+        name: "{{ container.name }}"
+        image: "{{ container.registry }}/{{ container.image }}:{{ container.tag | default('latest') }}"
+        hostname: "{{ container.name | default( omit )}}"
+        pod: "{{ container.pod | default( omit ) }}"
+        command: "{{ container.pod | default( omit ) }}" # Override command of container (string or list)
+        # Environment
+        env: "{{ container.env | default( omit ) }}" # dictionary of environment variables
+        env_file: "{{ container.env_file | default( omit ) }}" # Read in a line delimited file of environment variables
+        env_host: "{{ container.env_host | default( omit ) }}" # Use all host environment variables in container. Default: false
+        log_level: "{{ container.log_level | default( omit ) }}" # [ debug | info | warn | error | fatal | panic ] Default: error
+        # Run
+        detach: "{{ container.tty | default( omit ) }}" # Run container in detach mode. Default: true
+        interactive: "{{ container.interactive | default( omit ) }}" # Keep stdin open even if not attached. Default: false
+        tty: "{{ container.tty | default( omit ) }}" # Allocate a pseudo-TTY. Default: false
+        read_only: "{{ container.read_only | default( omit ) }}" # Default: False
+        restart_policy: "{{ container.restart_policy | default( omit ) }}"
+        rm: "{{ container.rm | default( false ) }}"
+        # Storage
+        mounts: "{{ container.mounts | default( omit ) }}" # - type=bind,source=/path/on/host,destination=/path/in/container
+        volumes: "{{ container.volumes | default( omit ) }}" # Bind mounts /HOST-DIR to /CONTAINER-DIR
+        # Networking
+        publish: "{{ container.publish | default( omit ) }}" # # Default: None
+        publish_all: "{{ container.publish_all | default( omit ) }}" # Default: False
+        add_hosts: "{{ container.add_hosts | default( omit ) }}" # hostame: IP mapping dict added to the container’s `/etc/hosts` file
+        dns_servers: "{{ container.dns_servers | default( omit ) }}" # list of DNS servers
+        expose: "{{ container.expose | default( omit ) }}" # Expose a port [range] for redirection on host
+        mac_address: "{{ container.mac_address | default( omit ) }}" # must be unique within one Ethernet network
+        ip: "{{ container.ip | default( omit ) }}" # static IP within default CNI pool (10.88.0.0/16)
+      register: container
+
+    - name: Show container
+      ansible.builtin.debug:
+        var: container
+        verbosity: 1
+
+    - name: Login Instructions
+      vars:
+        bar: "░  "
+        line_2: "Attach to container {{ container_name }}:"
+        line_3: "  `podman attach {{ container_name }}`"
+      ansible.builtin.debug:
+        msg: |
+          {{bar}}
+          {{bar}}        _    
+          {{bar}}    ,--(_)     {{ line_1 | default('') }}
+          {{bar}}  _/ ;-._\     {{ line_2 | default('') }}
+          {{bar}} (_)(   ) )    {{ line_3 | default('') }}
+          {{bar}}   \ ;-'_/     {{ line_4 | default('') }}
+          {{bar}}    `--(_)     {{ line_5 | default('') }}
+          {{bar}}
+
+    - name: Podman CLI Equivalent Commands
+      ansible.builtin.debug:
+        msg: |
+
+          Podman CLI Equivalent Commands
+          ------------------------------
+          {{ container.podman_actions | to_nice_yaml(indent=2) }}
+
+    # Add Data Source
+    # type: CSV
+    # name: NYRR
+    # path: /data/nyrr_org_results.csv
+
+    # {{bar}}     .--.       {{ line_1 | default('') }}
+    # {{bar}}    |o_o |      {{ line_2 | default('') }}
+    # {{bar}}    |:_/ |      {{ line_3 | default('') }}
+    # {{bar}}   //   \ \     {{ line_4 | default('') }}
+    # {{bar}}  (|     | )    {{ line_5 | default('') }}
+    # {{bar}} /'\_   _/`\    {{ line_6 | default('') }}
+    # {{bar}} \___)=(___/    {{ line_7 | default('') }}
+    # {{bar}}
+    # https://asciiart.website/index.php?art=logos%20and%20insignias/linux
+
+    # - name: Run commands using podman tool
+    #   containers.podman.podman:
+    #     remote_addr: "{{ container.id }}" # ID of the container you want to access: ansible_host, inventory_hostname, ansible_podman_host
+    #     remote_user:        # name or UID | ANSIBLE_REMOTE_USER | ansible_user
+    #     podman_executable:  # podman | ANSIBLE_PODMAN_EXECUTABLE | ansible_podman_executable
+    #     podman_extra_args:
+
+    # - name: Allow the Ubuntu container to run in the 80 port of the host
+    #   become: true
+    #   become_user: root
+    #   become_method: sudo
+    #   ansible.posix.sysctl:
+    #     name: net.ipv4.ip_unprivileged_port_start
+    #     value: "80"
+    #     sysctl_set: true
+    #     reload: true
+
+    # - name: Disable Container Lower Ports
+    #   become: true
+    #   become_user: root
+    #   become_method: sudo
+    #   ansible.posix.sysctl:
+    #     name: net.ipv4.ip_unprivileged_port_start
+    #     value: "1024"
+    #     sysctl_set: true
+    #     reload: true

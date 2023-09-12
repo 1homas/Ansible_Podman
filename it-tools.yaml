@@ -1,0 +1,66 @@
+---
+#------------------------------------------------------------------------------
+# ```sh
+# docker run -d \
+#   --name it-tools \
+#   --restart unless-stopped \
+#   -p 8080:80 \
+#   corentinth/it-tools:latest
+# ```
+#
+# Open in browser @ http://localhost:8080
+#
+# Equivalent docker_compose.yaml file:
+# ```dockerfile
+# version: '3.3'
+# services:
+#     it-tools:
+#         container_name: it-tools
+#         restart: unless-stopped
+#         ports:
+#             - '8080:80'
+#         image: 'corentinth/it-tools:latest'
+# ```
+#------------------------------------------------------------------------------
+
+- name: Create and Run IT-Tools Container
+  hosts: localhost
+  gather_facts: no
+  vars:
+    registry: docker.io
+    container_name: it-tools
+    image: corentinth/it-tools
+    image_tag: latest
+
+  tasks:
+
+    - name: Create Container
+      containers.podman.podman_container:
+        state: started  # [absent, present, stopped, started (default), created]
+        name: IT-Tools
+        image: "{{ registry }}/{{ image }}:{{ image_tag | default('latest') }}"
+        hostname: "{{ container_name }}"
+        restart_policy: on-failure:10  # [:max_retries]
+        detach: true  # Run container in detach mode. Default: true
+        tty: true   # Allocate a pseudo-TTY. Default: false
+        volume:  # Bind mounts /HOST-DIR to /CONTAINER-DIR 
+          - "{{ playbook_dir }}/files/1homas:/home/1homas"
+          - "{{ playbook_dir }}/roles/races/files/:/data"
+      register: container
+
+    - name: Show Container
+      ansible.builtin.debug:
+        var: container
+
+    - name: Container Command & Connection
+      vars:
+        bar: "░  "
+      ansible.builtin.debug:
+        msg: |
+          
+          Podman CLI Equivalent Commands:
+          {{ container.podman_actions | to_nice_yaml(indent=2) }}
+          
+          ░ 
+          ░ Connect to container `podman attach {{ container_name }}`
+          ░ 
