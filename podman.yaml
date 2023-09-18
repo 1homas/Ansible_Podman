@@ -211,19 +211,19 @@
     #--------------------------------------------------------------------------
     # podman container rm
     #--------------------------------------------------------------------------
-    - name: Get Container Info
-      tags: rm,delete,remove,
-      block:
-        - name: Get All Containers
-          containers.podman.podman_container_info:
-          register: result
+    # - name: Get Container Info
+    #   tags: rm,delete,remove,
+    #   block:
+    #     - name: Get All Containers
+    #       containers.podman.podman_container_info:
+    #       register: result
 
-        - name: Set `containers`
-          ansible.builtin.set_fact:
-            containers: "{{ result.containers }}"
+    #     - name: Set `containers`
+    #       ansible.builtin.set_fact:
+    #         containers: "{{ result.containers }}"
 
-        - name: Stop and Remove All Containers
-          loop: "{{ containers }}"
-          containers.podman.podman_container:
-            state: absent
-            name: "{{ item.Name }}"
+    #     - name: Stop and Remove All Containers
+    #       loop: "{{ containers }}"
+    #       containers.podman.podman_container:
+    #         state: absent
+    #         name: "{{ item.Name }}"
