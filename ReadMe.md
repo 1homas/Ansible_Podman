@@ -17,21 +17,52 @@ There are many registries with repositories of official container images:
 
 For Mac, Podman is provided through [Homebrew](https://brew.sh/). Once you have set up brew, you can use the `brew install` command to install Podman:
 
-  ```sh
-  brew install podman
-  ```
+```sh
+brew install podman
+brew install podman-desktop       # manage containers via UI
+brew install podman-compose       # optional for dockerfiles and Kubernetes
+```
 
 Create and start your first Podman machine:
 
-  ```sh
-  podman machine initpodman machine start
-  ```
+```sh
+podman machine init               # default --disk-size=100GB --memory=2GB
+podman machine init --cpus=1 --disk-size=50G --memory=2G --volume $HOME:$HOME
+podman machine start
+```
 
 Verify the installation using:
 
-  ```sh
-  podman info
-  ```
+```sh
+podman info
+```
+
+Launch an NGINX web server container:
+
+```sh
+cat > index.html <<EOF
+<html>
+<title>Hello, World!</title>
+<h1 style="text-align: center;">Hello, World!</h1>
+</html>
+EOF
+
+podman run \
+  --detach --tty --rm \
+  --publish 8080:80 \
+  --volume $PWD:/usr/share/nginx/html \
+  --name nginx \
+  nginx:latest
+
+curl http://localhost:8080
+```
+
+Uninstall at any time :
+
+```sh
+podman machine rm -f podman-machine-default --force || true
+brew uninstall podman podman-compose podman-desktop
+```
 
 ### Ansible
 
@@ -62,9 +93,34 @@ Verify the installation using:
   ansible-galaxy collection list
   ```
 
+### Podman Container Inventory
+
+Use the [`community.docker.docker_containers`](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_containers_inventory.html) inventory plugin with Podman!
+
+1. Run Podman Desktop
+2. Verify the Docker socket is redirected to `podman.sock` :
+
+  ```sh
+  ls -la /var/run/docker.sock
+  ```
+
+3. If not, enable Docker Compatibilty in the status bar at the bottom of the window which installs the `podman-mac-helper` and redirects `/var/run/docker` to the `podman.sock` location
+4. Restart Podman Desktop
+5. Copy this `docker.yml` file to your Ansible `inventory` directory or specify it using the `-i {inventory_file}` command line option :
+
+  ```yaml
+  plugin: community.docker.docker_containers
+  docker_host: unix://var/run/docker.sock
+  ```
+
+6. Run `ansible-inventory` to see your Podman containers!
+
+  ```sh
+  ansible-inventory --graph
+  ansible-inventory -i inventory/docker.yml --graph
+  ```
+
 ## Run
-
-
 
 ### podman.yaml
 

@@ -1,0 +1,16 @@
+#------------------------------------------------------------------------------
+# Use the community.docker.docker_containers inventory plugin with Podman!
+# In Podman Desktop:
+# 1) Run Podman Desktop
+# 2) Enable Docker Compatibilty in the status bar at the bottom of the window
+# 3) Restart Podman Desktop
+#
+# For how to use dynamice inventory plugins, see
+#   https://docs.ansible.com/ansible/latest/plugins/inventory.html
+# See all available inventory plugins:
+#   ansible-doc -t inventory -l
+# Get details about this plugin:
+#   ansible-doc -t inventory community.docker.docker_containers
+#------------------------------------------------------------------------------
+plugin: community.docker.docker_containers
+docker_host: unix://var/run/docker.sock

@@ -1,2 +1,5 @@
 ansible
 jmespath
+jinja2
+docker-py # dynamic docker inventory
+requests  # dynamic docker inventory
